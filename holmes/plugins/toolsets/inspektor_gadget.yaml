@@ -1,0 +1,71 @@
+toolsets:
+  inspektor-gadget/core:
+    description: "Inspektor Gadget eBPF-based observability for Kubernetes troubleshooting"
+    docs_url: "https://www.inspektor-gadget.io/docs/"
+    icon_url: "https://www.inspektor-gadget.io/images/ig-logo.svg"
+    tags:
+      - cli
+    prerequisites:
+      - command: "kubectl gadget version"
+
+    config:
+      timeout: 30  # Default timeout for tracing gadgets
+
+    tools:
+      # === Snapshot gadgets (point-in-time state) ===
+      - name: "gadget_snapshot_process"
+        description: "Get a snapshot of running processes in a pod/namespace"
+        command: "kubectl gadget run snapshot_process -o json --timeout {{ config.timeout | default(30) }}{% if namespace %} -n {{ namespace }}{% endif %}{% if pod %} --podname {{ pod }}{% endif %}"
+
+      - name: "gadget_snapshot_socket"
+        description: "Get a snapshot of open sockets in a pod/namespace"
+        command: "kubectl gadget run snapshot_socket -o json --timeout {{ config.timeout | default(30) }}{% if namespace %} -n {{ namespace }}{% endif %}{% if pod %} --podname {{ pod }}{% endif %}"
+
+      # === Trace gadgets (events over time) ===
+      - name: "gadget_trace_tcp"
+        description: "Trace TCP connect/accept/close events to debug network issues"
+        command: "kubectl gadget run trace_tcp -o json --timeout {{ config.timeout | default(30) }} -n {{ namespace }}{% if pod %} --podname {{ pod }}{% endif %}"
+        args:
+          - name: "namespace"
+            type: "string"
+            description: "Kubernetes namespace (required)"
+
+      - name: "gadget_trace_dns"
+        description: "Trace DNS queries and responses to debug DNS resolution issues"
+        command: "kubectl gadget run trace_dns -o json --timeout {{ config.timeout | default(30) }} -n {{ namespace }}{% if pod %} --podname {{ pod }}{% endif %}"
+        args:
+          - name: "namespace"
+            type: "string"
+            description: "Kubernetes namespace (required)"
+
+      - name: "gadget_trace_oomkill"
+        description: "Trace OOM kill events to identify memory pressure issues"
+        command: "kubectl gadget run trace_oomkill -o json --timeout {{ config.timeout | default(30) }}{% if namespace %} -n {{ namespace }}{% endif %}"
+
+      - name: "gadget_trace_exec"
+        description: "Trace process execution to see what commands are being run"
+        command: "kubectl gadget run trace_exec -o json --timeout {{ config.timeout | default(30) }} -n {{ namespace }}{% if pod %} --podname {{ pod }}{% endif %}"
+        args:
+          - name: "namespace"
+            type: "string"
+            description: "Kubernetes namespace (required)"
+
+      - name: "gadget_trace_open"
+        description: "Trace file open operations to debug file access issues"
+        command: "kubectl gadget run trace_open -o json --timeout {{ config.timeout | default(30) }} -n {{ namespace }}{% if pod %} --podname {{ pod }}{% endif %}"
+        args:
+          - name: "namespace"
+            type: "string"
+            description: "Kubernetes namespace (required)"
+
+      # === Network capture gadgets ===
+      - name: "gadget_tcpdump"
+        description: "Capture and analyze network packets using tcpdump with pcap filters"
+        command: "kubectl gadget run tcpdump:latest --timeout {{ config.timeout | default(30) }} -n {{ namespace }}{% if pod %} --podname {{ pod }}{% endif %}{% if filter %} --pf \"{{ filter }}\"{% endif %} -o pcap-ng | tcpdump -nvr -"
+        args:
+          - name: "namespace"
+            type: "string"
+            description: "Kubernetes namespace (required)"
+          - name: "filter"
+            type: "string"
+            description: "Optional pcap filter expression (e.g., 'port 80', 'host 10.0.0.1', 'tcp and port 443')"
